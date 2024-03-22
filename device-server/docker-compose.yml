@@ -1,0 +1,81 @@
+version: "3.9"
+
+services:
+  postgres-db-device:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: "device"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    networks:
+      - myNetwork
+
+  postgres-db-user:
+    image: postgres
+    ports:
+      - "5438:5432"
+    environment:
+      POSTGRES_DB: "user"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    networks:
+      - myNetwork
+
+  device-web-container:
+    image: device-service
+    environment:
+      PORT: "8080"
+      JDBC_URL: "jdbc:postgresql:/"
+      POSTGRES_HOST: postgres-db-device
+      POSTGRES_PORT: "5432"
+      DATABASE: "device"
+      DB_USERNAME: "postgres"
+      DB_PASSWORD: "1234"
+      MAX_DATABASE_POOL_SIZE: "20"
+      DATABASE_AUTO_COMMIT: false
+    ports:
+      - "8080:8080"
+    networks:
+      - myNetwork
+    expose:
+      - 8080
+
+  user-web-container:
+    image: user-service
+    environment:
+      PORT: 8081
+      DEVICE_HOST: device-web-container
+      JDBC_URL: "jdbc:postgresql:/"
+      POSTGRES_HOST: postgres-db-user
+      POSTGRES_PORT: "5432"
+      DATABASE: "user"
+      DB_USERNAME: "postgres"
+      DB_PASSWORD: "1234"
+      MAX_DATABASE_POOL_SIZE: "20"
+      DATABASE_AUTO_COMMIT: false
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres-db-user
+    networks:
+      - myNetwork
+    expose:
+      - 8081
+
+  front-container:
+    image: frontend-img
+    ports:
+      - "3000:3000"
+    expose:
+      - "3000"
+    depends_on:
+      - user-web-container
+      - device-web-container
+    networks:
+      - myNetwork
+
+networks:
+  myNetwork:
+    driver: bridge
